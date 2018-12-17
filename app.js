@@ -1,9 +1,9 @@
-const express = require('express')
+const _ = require('lodash');
+const express = require('express');
 const app = express();
 var bodyParser = require('body-parser');
-const config = require('./config/config.js');
 
-process.env.NODE_ENV = 'development';
+require('./config/config.js');
 
 app.use(bodyParser.urlencoded({
     extended: true
@@ -43,10 +43,12 @@ router.route('/fbbot')
         });
     });
 
-app.use('/api', router);
+app.use('/', router);
+
 app.on('error', onError);
 app.listen(port);
 console.log('new server created on port ' + port);
+
 function onError(error) {
     if (error.syscall !== "listen") {
       throw error;
