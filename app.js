@@ -1,6 +1,7 @@
 const _ = require('lodash');
 const express = require('express');
 const app = express();
+const path = require('path');
 var bodyParser = require('body-parser');
 
 require('./config/config.js');
@@ -43,8 +44,9 @@ router.route('/fbbot')
         });
     });
 
-app.use('/', router);
 
+app.use('/', express.static(path.join(__dirname, 'FBBot')));    
+app.use('/', router);
 app.on('error', onError);
 app.listen(port);
 console.log('new server created on port ' + port);
