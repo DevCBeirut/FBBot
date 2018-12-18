@@ -71,29 +71,12 @@ router.route('/fbbot/webhook/')
     });
 
 function sendTextMessage(sender, text, token) {
-    var messageData = {
-        text: text
-    };
-    request({
-        url: 'https://graph.facebook.com/v2.6/me/messages',
-        qs: {
-            access_token: token
-        },
-        method: 'POST',
-        json: {
-            recipient: {
-                id: sender
-            },
-            message: messageData,
-            tag: "NON_PROMOTIONAL_SUBSCRIPTION"
-        }
-    }, function (error, response, body) {
-        if (error) {
-            console.log('Error:', error);
-        } else if (response.body.error) {
-            console.log('Error: ', response.body.error);
-        }
-    });
+    const FBMessenger = require('fb-messenger')
+    const messenger = new FBMessenger({
+        token: token
+    })
+    messenger.sendTextMessage(sender, text);
+
 }
 
 router.route('/fbbot')

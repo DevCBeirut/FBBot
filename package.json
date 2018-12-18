@@ -3,13 +3,14 @@
   "version": "1.0.0",
   "description": "FB bot",
   "main": "app.js",
-  "scripts": {   
+  "scripts": {
     "start": "node app.js"
   },
   "author": "Salah Awad",
   "license": "MIT",
   "dependencies": {
     "express": "^4.16.4",
+    "fb-messenger": "^2.3.1",
     "lodash": "^4.17.11"
   },
   "engines": {
