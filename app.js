@@ -55,15 +55,12 @@ router.route('/fbbot/webhook/')
     })
     .post((req, res) => {
         let token = process.env.TOKEN;
-        console.log("Request body : " + req.body);
-        console.log("Request body first entry : " + req.body.entry[0]);
         var messaging_events = req.body.entry[0].messaging;
         for (var i = 0; i < messaging_events.length; i++) {
             var event = req.body.entry[0].messaging[i];
             var sender = event.sender.id;
             if (event.message && event.message.text) {
                 var text = event.message.text;
-                console.log("Received text: " + text);
                 sendTextMessage(sender, text + "!", token);
             }
         }
@@ -75,8 +72,14 @@ function sendTextMessage(sender, text, token) {
     const messenger = new FBMessenger({
         token: token
     })
-    messenger.sendTextMessage(sender, text);
-
+    try {
+        console.info("Sending message...");
+        console.info("Sender: " + sender);
+        console.info("Message: " + text);
+        messenger.sendTextMessage(sender, text);
+    } catch (e) {
+        console.error(e)
+    }
 }
 
 router.route('/fbbot')
