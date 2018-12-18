@@ -55,6 +55,8 @@ router.route('/fbbot/webhook/')
     })
     .post((req, res) => {
         let token = process.env.TOKEN;
+        console.log("Request body : "+req.body);        
+        console.log("Request body first entry : "+req.body.entry[0]);  
         var messaging_events = req.body.entry[0].messaging;
         for (var i = 0; i < messaging_events.length; i++) {
             var event = req.body.entry[0].messaging[i];
@@ -82,6 +84,7 @@ function sendTextMessage(sender, text,token) {
                 id: sender
             },
             message: messageData,
+            tag: "NON_PROMOTIONAL_SUBSCRIPTION"
         }
     }, function (error, response, body) {
         if (error) {
@@ -94,7 +97,7 @@ function sendTextMessage(sender, text,token) {
 
 router.route('/fbbot')
     .get((req, res) => {
-        if (req.query['hub.verify_token'] === token) {
+        if (req.query['hub.verify_token'] === process.env.TOKEN) {
             res.send(req.query['hub.challenge']);
         }
         res.send('Wrong token!');
