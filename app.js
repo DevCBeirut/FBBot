@@ -1,10 +1,22 @@
-const _ = require('lodash');
-const express = require('express');
-const app = express();
-const path = require('path');
+const
+    _ = require('lodash'),
+    express = require('express'),
+    app = express(),
+    path = require('path'),
+    fbbot = require('./fbbot');
+
 var bodyParser = require('body-parser');
 
 require('./config/config.js');
+
+var port = process.env.PORT || global.gConfig.node_port;
+var router = express.Router();
+app.use('/', express.static(path.join(__dirname, 'FBBot')));
+app.use('/', router);
+app.on('error', onError);
+app.listen(port);
+console.log('new server created on port ' + port);
+
 
 app.use(bodyParser.urlencoded({
     extended: true
@@ -12,8 +24,6 @@ app.use(bodyParser.urlencoded({
 app.use(bodyParser.json());
 
 
-var port = process.env.PORT || global.gConfig.node_port;
-var router = express.Router();
 
 router.use(function (req, res, next) {
     console.log('API is called.');
@@ -26,45 +36,72 @@ router.get('/', function (req, res) {
         message: 'Welcome to Bot API'
     });
 });
+router.get('/authorize',
+    function (req, res) {
+        var accountLinkingToken = req.query.account_linking_token;
+        var redirectURI = req.query.redirect_uri;
 
+        // Authorization Code should be generated per user by the developer. This will
+        // be passed to the Account Linking callback.
+        var authCode = "1234567890";
+
+        // Redirect users to this URI on successful login
+        var redirectURISuccess = redirectURI + "&authorization_code=" + authCode;
+
+        res.render('authorize', {
+            accountLinkingToken: accountLinkingToken,
+            redirectURI: redirectURI,
+            redirectURISuccess: redirectURISuccess
+        });
+    });
 router.route('/fbbot/webhook/')
     .get((req, res) => {
-
-        let VERIFY_TOKEN = process.env.TOKEN;
-
-        // Parse the query params
-        let mode = req.query['hub.mode'];
-        let token = req.query['hub.verify_token'];
-        let challenge = req.query['hub.challenge'];
-
-        // Checks if a token and mode is in the query string of the request
-        if (mode && token) {
-
-            // Checks the mode and token sent is correct
-            if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-
-                // Responds with the challenge token from the request
-                console.log('WEBHOOK_VERIFIED');
-                res.status(200).send(challenge);
-
-            } else {
-                // Responds with '403 Forbidden' if verify tokens do not match
-                res.sendStatus(403);
-            }
+        if (req.query['hub.mode'] === 'subscribe' &&
+            req.query['hub.verify_token'] === VALIDATION_TOKEN) {
+            console.log("Validating webhook");
+            res.status(200).send(req.query['hub.challenge']);
+        } else {
+            console.error("Failed validation. Make sure the validation tokens match.");
+            res.sendStatus(403);
         }
     })
     .post((req, res) => {
-        let token = process.env.TOKEN;
-        var messaging_events = req.body.entry[0].messaging;
-        for (var i = 0; i < messaging_events.length; i++) {
-            var event = req.body.entry[0].messaging[i];
-            var sender = event.sender.id;
-            if (event.message && event.message.text) {
-                var text = event.message.text;
-                sendTextMessage(sender, text + "!", token);
-            }
+        var data = req.body;
+
+        // Make sure this is a page subscription
+        if (data.object == 'page') {
+            // Iterate over each entry
+            // There may be multiple if batched
+            data.entry.forEach(function (pageEntry) {
+                var pageID = pageEntry.id;
+                var timeOfEvent = pageEntry.time;
+
+                // Iterate over each messaging event
+                pageEntry.messaging.forEach(function (messagingEvent) {
+                    if (messagingEvent.optin) {
+                        receivedAuthentication(messagingEvent);
+                    } else if (messagingEvent.message) {
+                        receivedMessage(messagingEvent);
+                    } else if (messagingEvent.delivery) {
+                        receivedDeliveryConfirmation(messagingEvent);
+                    } else if (messagingEvent.postback) {
+                        receivedPostback(messagingEvent);
+                    } else if (messagingEvent.read) {
+                        receivedMessageRead(messagingEvent);
+                    } else if (messagingEvent.account_linking) {
+                        receivedAccountLink(messagingEvent);
+                    } else {
+                        console.log("Webhook received unknown messagingEvent: ", messagingEvent);
+                    }
+                });
+            });
+
+            // Assume all went well.
+            //
+            // You must send back a 200, within 20 seconds, to let us know you've
+            // successfully received the callback. Otherwise, the request will time out.
+            res.sendStatus(200);
         }
-        res.sendStatus(200);
     });
 
 function sendTextMessage(sender, text, token) {
@@ -100,11 +137,6 @@ router.route('/fbbot')
     });
 
 
-app.use('/', express.static(path.join(__dirname, 'FBBot')));
-app.use('/', router);
-app.on('error', onError);
-app.listen(port);
-console.log('new server created on port ' + port);
 
 function onError(error) {
     if (error.syscall !== "listen") {
@@ -130,6 +162,4 @@ function onError(error) {
     }
 }
 
-function validateRequest(body) {
-
-}
+module.exports = app;
